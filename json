@@ -1,0 +1,717 @@
++		flowDetail["properties"]	{{
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "Daily Tweet",
+    "userType": "Owner",
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "timeZone": "GMT Standard Time",
+            "startTime": "2020-06-29T08:30:00Z",
+            "schedule": {
+              "hours": [
+                "8"
+              ],
+              "minutes": [
+                30
+              ]
+            }
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "List_the_events_on_a_calendar": {
+          "runAfter": {
+            "Init_Tweet_Sting": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_googlecalendar",
+              "connectionName": "shared_googlecalendar",
+              "operationId": "ListEvents"
+            },
+            "parameters": {
+              "calendarId": "9d8847ick4nevmlettl38peblbudn3cd@import.calendar.google.com",
+              "timeMin": "@utcNow()",
+              "timeMax": "@formatDateTime(utcNow(),'yyyy-MM-ddT23:59:00.000Z')"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Init_List_of_lines": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "TweetLines",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Init_Tweet_Sting": {
+          "runAfter": {
+            "Init_List_of_lines": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "tweet",
+                "type": "string",
+                "value": "@{utcNow('dddd')}'s Events: "
+              }
+            ]
+          }
+        },
+        "Apply_to_each": {
+          "foreach": "@outputs('List_the_events_on_a_calendar')?['body/items']",
+          "actions": {
+            "Condition": {
+              "actions": {
+                "Condition_2": {
+                  "actions": {
+                    "Append_to_array_variable_2": {
+                      "runAfter": {},
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "TweetLines",
+                        "value": "All Day - @{items('Apply_to_each')?['summary']}"
+                      }
+                    }
+                  },
+                  "runAfter": {},
+                  "else": {
+                    "actions": {
+                      "Append_to_array_variable": {
+                        "runAfter": {},
+                        "type": "AppendToArrayVariable",
+                        "inputs": {
+                          "name": "TweetLines",
+                          "value": "@{items('Apply_to_each')?['summary']} continues"
+                        }
+                      }
+                    }
+                  },
+                  "expression": {
+                    "equals": [
+                      "@int(formatDateTime(items('Apply_to_each')?['start'],'dd'))",
+                      "@int(utcNow('dd'))"
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "runAfter": {},
+              "else": {
+                "actions": {
+                  "Condition_3": {
+                    "actions": {
+                      "Convert_time_zone": {
+                        "runAfter": {},
+                        "type": "Expression",
+                        "kind": "ConvertTimeZone",
+                        "inputs": {
+                          "baseTime": "@items('Apply_to_each')?['start']",
+                          "formatString": "ddd h:mm tt",
+                          "sourceTimeZone": "UTC",
+                          "destinationTimeZone": "GMT Standard Time"
+                        }
+                      },
+                      "Append_Array_short_time": {
+                        "runAfter": {
+                          "Convert_time_zone": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "AppendToArrayVariable",
+                        "inputs": {
+                          "name": "TweetLines",
+                          "value": "@{body('Convert_time_zone')} @{items('Apply_to_each')?['summary']} "
+                        }
+                      }
+                    },
+                    "runAfter": {},
+                    "else": {
+                      "actions": {
+                        "Convert_time_zone_2": {
+                          "runAfter": {},
+                          "type": "Expression",
+                          "kind": "ConvertTimeZone",
+                          "inputs": {
+                            "baseTime": "@items('Apply_to_each')?['start']",
+                            "formatString": "ddd h tt",
+                            "sourceTimeZone": "UTC",
+                            "destinationTimeZone": "GMT Standard Time"
+                          }
+                        },
+                        "Append_to_array_variable_3": {
+                          "runAfter": {
+                            "Convert_time_zone_2": [
+                              "Succeeded"
+                            ]
+                          },
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "TweetLines",
+                            "value": "@{body('Convert_time_zone_2')} @{items('Apply_to_each')?['summary']}"
+                          }
+                        }
+                      }
+                    },
+                    "expression": {
+                      "equals": [
+                        "@int(formatDateTime(items('Apply_to_each')?['start'],'mm'))",
+                        0
+                      ]
+                    },
+                    "type": "If"
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@int(formatDateTime(items('Apply_to_each')?['start'],'HH'))",
+                  0
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Check_if_we_have_events": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        },
+        "For_all_Tweet_lines": {
+          "foreach": "@variables('TweetLines')",
+          "actions": {
+            "Condition_4": {
+              "actions": {
+                "Post_a_tweet_2": {
+                  "runAfter": {},
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_twitter",
+                      "connectionName": "shared_twitter",
+                      "operationId": "Tweet"
+                    },
+                    "parameters": {
+                      "tweetText": "@{variables('tweet')}\n(cont)"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Set_variable": {
+                  "runAfter": {
+                    "Post_a_tweet_2": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "tweet",
+                    "value": "@{items('For_all_Tweet_lines')}"
+                  }
+                }
+              },
+              "runAfter": {},
+              "else": {
+                "actions": {
+                  "Append_to_string_variable": {
+                    "runAfter": {},
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "tweet",
+                      "value": "\n@{items('For_all_Tweet_lines')}"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "greaterOrEquals": [
+                  "@add(length(variables('tweet')), length(items('For_all_Tweet_lines')))",
+                  280
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Apply_to_each": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        },
+        "Post_a_tweet": {
+          "runAfter": {
+            "For_all_Tweet_lines": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_twitter",
+              "connectionName": "shared_twitter",
+              "operationId": "Tweet"
+            },
+            "parameters": {
+              "tweetText": "@{variables('tweet')}\nFind all the details here https://bit.ly/V_E_H "
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Check_if_we_have_events": {
+          "actions": {},
+          "runAfter": {
+            "List_the_events_on_a_calendar": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Terminate": {
+                "runAfter": {},
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Succeeded"
+                }
+              }
+            }
+          },
+          "expression": {
+            "greater": [
+              "@length(outputs('List_the_events_on_a_calendar')?['body/items'])",
+              0
+            ]
+          },
+          "type": "If"
+        }
+      }
+    },
+    "state": "Stopped",
+    "sharingType": "CommonDataService",
+    "connectionReferences": {
+      "shared_googlecalendar": {
+        "connectionName": "64815c3076fe4650b908cc3c1bf61b61",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_googlecalendar",
+        "displayName": "Google Calendar",
+        "iconUri": "https://connectoricons-prod.azureedge.net/releases/v1.0.1571/1.0.1571.2769/googlecalendar/icon.png",
+        "brandColor": "#3b5998",
+        "tier": "Standard"
+      },
+      "shared_twitter": {
+        "connectionName": "363d5c05c4d84213bb133f888862a4df",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_twitter",
+        "displayName": "Twitter",
+        "iconUri": "https://connectoricons-prod.azureedge.net/u/nikitazotov/v1.0.1624-twitter-remove-shared-app/1.0.1624.3228/twitter/icon.png",
+        "brandColor": "#5fa9dd",
+        "tier": "Standard"
+      }
+    },
+    "installedConnectionReferences": {
+      "shared_googlecalendar": {
+        "connectionName": "64815c3076fe4650b908cc3c1bf61b61",
+        "apiDefinition": {
+          "name": "shared_googlecalendar",
+          "id": "/providers/Microsoft.PowerApps/apis/shared_googlecalendar",
+          "type": "/providers/Microsoft.PowerApps/apis",
+          "properties": {
+            "displayName": "Google Calendar",
+            "iconUri": "https://connectoricons-prod.azureedge.net/releases/v1.0.1571/1.0.1571.2769/googlecalendar/icon.png",
+            "purpose": "NotSpecified",
+            "connectionParameters": {
+              "token": {
+                "type": "oauthSetting",
+                "oAuthSettings": {
+                  "identityProvider": "Google",
+                  "clientId": "644771627308-39ilf2lrl66oba7cccj7rahad24j0q5u.apps.googleusercontent.com",
+                  "scopes": [
+                    "https://www.googleapis.com/auth/calendar"
+                  ],
+                  "redirectMode": "GlobalPerConnector",
+                  "redirectUrl": "https://global.consent.azure-apim.net/redirect/googlecalendar",
+                  "properties": {
+                    "IsFirstParty": "False",
+                    "IsOnbehalfofLoginSupported": false
+                  }
+                },
+                "uiDefinition": {
+                  "displayName": "Log in with Google Account",
+                  "description": "Log in with Google Account",
+                  "tooltip": "Log in with Google Account",
+                  "constraints": {
+                    "required": "true"
+                  }
+                }
+              }
+            },
+            "scopes": {
+              "will": [],
+              "wont": []
+            },
+            "runtimeUrls": [
+              "https://uk-001.azure-apim.net/apim/googlecalendar"
+            ],
+            "primaryRuntimeUrl": "https://uk-001.azure-apim.net/apim/googlecalendar",
+            "metadata": {
+              "source": "marketplace",
+              "brandColor": "#3b5998",
+              "useNewApimVersion": "true",
+              "version": {
+                "previous": "releases/v1.0.1571\\1.0.1571.2769",
+                "current": "releases/v1.0.1571\\1.0.1571.2769"
+              }
+            },
+            "capabilities": [
+              "actions",
+              "triggers"
+            ],
+            "tier": "Standard",
+            "isCustomApi": false,
+            "description": "Google Calendar lets you organize your schedule and share events with co-workers and friends. With Google's free online calendar, it's easy to keep track of your daily schedule.",
+            "createdTime": "2018-02-22T20:33:24.7112181Z",
+            "changedTime": "2022-06-16T19:03:33.7103056Z",
+            "publisher": "Microsoft"
+          }
+        },
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_googlecalendar",
+        "displayName": "Google Calendar",
+        "iconUri": "https://connectoricons-prod.azureedge.net/releases/v1.0.1571/1.0.1571.2769/googlecalendar/icon.png",
+        "brandColor": "#3b5998",
+        "tier": "Standard"
+      },
+      "shared_twitter": {
+        "connectionName": "363d5c05c4d84213bb133f888862a4df",
+        "apiDefinition": {
+          "name": "shared_twitter",
+          "id": "/providers/Microsoft.PowerApps/apis/shared_twitter",
+          "type": "/providers/Microsoft.PowerApps/apis",
+          "properties": {
+            "displayName": "Twitter",
+            "iconUri": "https://connectoricons-prod.azureedge.net/u/nikitazotov/v1.0.1624-twitter-remove-shared-app/1.0.1624.3228/twitter/icon.png",
+            "purpose": "NotSpecified",
+            "connectionParameters": {
+              "token": {
+                "type": "oauthSetting",
+                "oAuthSettings": {
+                  "identityProvider": "Twitter",
+                  "clientId": "UNemsHioQgErXx39i0BQYGe9k",
+                  "scopes": [],
+                  "redirectMode": "Direct",
+                  "redirectUrl": "https://uk-001.consent.azure-apim.net/redirect",
+                  "properties": {
+                    "IsFirstParty": "False",
+                    "IsOnbehalfofLoginSupported": false
+                  }
+                },
+                "uiDefinition": {
+                  "displayName": "Sign in with Twitter Credentials",
+                  "description": "Sign in with Twitter Credentials",
+                  "tooltip": "Provide Your Twitter Credentials",
+                  "constraints": {
+                    "required": "true"
+                  }
+                }
+              }
+            },
+            "connectionParameterSets": {
+              "uiDefinition": {
+                "displayName": "Authentication Type",
+                "description": "Type of authentication to be used."
+              },
+              "values": [
+                {
+                  "name": "byoa",
+                  "uiDefinition": {
+                    "displayName": "Bring your own application",
+                    "description": "Sign in using your own Twitter app. For more details see 'Authentication and Bring your own application' section on this page."
+                  },
+                  "parameters": {
+                    "token-byoa": {
+                      "type": "oauthSetting",
+                      "oAuthSettings": {
+                        "identityProvider": "Twitter",
+                        "scopes": [],
+                        "redirectMode": "Global",
+                        "redirectUrl": "https://global.consent.azure-apim.net/redirect",
+                        "properties": {
+                          "IsFirstParty": "False",
+                          "IsOnbehalfofLoginSupported": false
+                        }
+                      },
+                      "uiDefinition": {
+                        "displayName": "Sign in with Twitter Credentials",
+                        "description": "Sign in with Twitter Credentials",
+                        "tooltip": "Provide Twitter Credentials",
+                        "constraints": {
+                          "required": "true"
+                        }
+                      }
+                    },
+                    "token-byoa:clientId": {
+                      "type": "string",
+                      "uiDefinition": {
+                        "displayName": "Consumer Key",
+                        "description": "Consumer key of your Twitter application",
+                        "constraints": {
+                          "required": "true",
+                          "hidden": "false"
+                        }
+                      }
+                    },
+                    "token-byoa:clientSecret": {
+                      "type": "securestring",
+                      "uiDefinition": {
+                        "displayName": "Consumer Secret",
+                        "description": "Client secret of your Twitter application",
+                        "constraints": {
+                          "required": "true",
+                          "hidden": "False"
+                        }
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "allowSharing": false
+                  }
+                }
+              ]
+            },
+            "scopes": {
+              "will": [],
+              "wont": []
+            },
+            "runtimeUrls": [
+              "https://uk-001.azure-apim.net/apim/twitter"
+            ],
+            "primaryRuntimeUrl": "https://uk-001.azure-apim.net/apim/twitter",
+            "metadata": {
+              "source": "marketplace",
+              "brandColor": "#5fa9dd",
+              "connectionLimits": {
+                "*": 2
+              },
+              "useNewApimVersion": "true",
+              "version": {
+                "previous": "releases/v1.0.1624\\1.0.1624.3221",
+                "current": "u/nikitazotov/v1.0.1624-twitter-remove-shared-app\\1.0.1624.3228"
+              }
+            },
+            "capabilities": [
+              "actions"
+            ],
+            "tier": "Standard",
+            "isCustomApi": false,
+            "description": "Twitter is an online social networking service that enables users to send and receive short messages called 'tweets'. Connect to Twitter to manage your tweets. You can perform various actions such as send tweet, search, view followers, etc.",
+            "createdTime": "2018-02-22T20:33:24.46122Z",
+            "changedTime": "2023-04-28T18:46:37.8735806Z",
+            "publisher": "Microsoft"
+          }
+        },
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_twitter",
+        "displayName": "Twitter",
+        "iconUri": "https://connectoricons-prod.azureedge.net/u/nikitazotov/v1.0.1624-twitter-remove-shared-app/1.0.1624.3228/twitter/icon.png",
+        "brandColor": "#5fa9dd",
+        "tier": "Standard"
+      }
+    },
+    "createdTime": "2020-07-06T10:05:07Z",
+    "lastModifiedTime": "2023-04-30T04:04:31Z",
+    "flowSuspensionReason": "None",
+    "environment": {
+      "name": "6415725c-d1d7-437d-a50c-117f8097ded5",
+      "type": "Microsoft.ProcessSimple/environments",
+      "id": "/providers/Microsoft.ProcessSimple/environments/6415725c-d1d7-437d-a50c-117f8097ded5"
+    },
+    "definitionSummary": {
+      "triggers": [
+        {
+          "type": "Recurrence"
+        }
+      ],
+      "actions": [
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "ListEvents",
+          "api": {
+            "name": "shared_googlecalendar",
+            "id": "/providers/Microsoft.PowerApps/apis/shared_googlecalendar",
+            "type": "/providers/Microsoft.PowerApps/apis",
+            "properties": {
+              "displayName": "Google Calendar",
+              "iconUri": "https://connectoricons-prod.azureedge.net/releases/v1.0.1571/1.0.1571.2769/googlecalendar/icon.png",
+              "metadata": {
+                "source": "marketplace",
+                "brandColor": "#3b5998",
+                "useNewApimVersion": "true",
+                "version": {
+                  "previous": "releases/v1.0.1571\\1.0.1571.2769",
+                  "current": "releases/v1.0.1571\\1.0.1571.2769"
+                }
+              },
+              "tier": "Standard",
+              "isCustomApi": false,
+              "description": "Google Calendar lets you organize your schedule and share events with co-workers and friends. With Google's free online calendar, it's easy to keep track of your daily schedule."
+            }
+          }
+        },
+        {
+          "type": "InitializeVariable"
+        },
+        {
+          "type": "InitializeVariable"
+        },
+        {
+          "type": "Foreach"
+        },
+        {
+          "type": "Foreach"
+        },
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "Tweet",
+          "api": {
+            "name": "shared_twitter",
+            "id": "/providers/Microsoft.PowerApps/apis/shared_twitter",
+            "type": "/providers/Microsoft.PowerApps/apis",
+            "properties": {
+              "displayName": "Twitter",
+              "iconUri": "https://connectoricons-prod.azureedge.net/u/nikitazotov/v1.0.1624-twitter-remove-shared-app/1.0.1624.3228/twitter/icon.png",
+              "metadata": {
+                "source": "marketplace",
+                "brandColor": "#5fa9dd",
+                "connectionLimits": {
+                  "*": 2
+                },
+                "useNewApimVersion": "true",
+                "version": {
+                  "previous": "releases/v1.0.1624\\1.0.1624.3221",
+                  "current": "u/nikitazotov/v1.0.1624-twitter-remove-shared-app\\1.0.1624.3228"
+                }
+              },
+              "tier": "Standard",
+              "isCustomApi": false,
+              "description": "Twitter is an online social networking service that enables users to send and receive short messages called 'tweets'. Connect to Twitter to manage your tweets. You can perform various actions such as send tweet, search, view followers, etc."
+            }
+          }
+        },
+        {
+          "type": "If"
+        },
+        {
+          "type": "If"
+        },
+        {
+          "type": "If"
+        },
+        {
+          "type": "Terminate"
+        },
+        {
+          "type": "If"
+        },
+        {
+          "type": "If"
+        },
+        {
+          "type": "OpenApiConnection",
+          "swaggerOperationId": "Tweet",
+          "api": {
+            "name": "shared_twitter",
+            "id": "/providers/Microsoft.PowerApps/apis/shared_twitter",
+            "type": "/providers/Microsoft.PowerApps/apis",
+            "properties": {
+              "displayName": "Twitter",
+              "iconUri": "https://connectoricons-prod.azureedge.net/u/nikitazotov/v1.0.1624-twitter-remove-shared-app/1.0.1624.3228/twitter/icon.png",
+              "metadata": {
+                "source": "marketplace",
+                "brandColor": "#5fa9dd",
+                "connectionLimits": {
+                  "*": 2
+                },
+                "useNewApimVersion": "true",
+                "version": {
+                  "previous": "releases/v1.0.1624\\1.0.1624.3221",
+                  "current": "u/nikitazotov/v1.0.1624-twitter-remove-shared-app\\1.0.1624.3228"
+                }
+              },
+              "tier": "Standard",
+              "isCustomApi": false,
+              "description": "Twitter is an online social networking service that enables users to send and receive short messages called 'tweets'. Connect to Twitter to manage your tweets. You can perform various actions such as send tweet, search, view followers, etc."
+            }
+          }
+        },
+        {
+          "type": "SetVariable"
+        },
+        {
+          "type": "AppendToStringVariable"
+        },
+        {
+          "type": "AppendToArrayVariable"
+        },
+        {
+          "type": "AppendToArrayVariable"
+        },
+        {
+          "type": "Expression",
+          "kind": "ConvertTimeZone"
+        },
+        {
+          "type": "AppendToArrayVariable"
+        },
+        {
+          "type": "Expression",
+          "kind": "ConvertTimeZone"
+        },
+        {
+          "type": "AppendToArrayVariable"
+        }
+      ]
+    },
+    "creator": {
+      "tenantId": "b1b1abe8-6081-424c-88db-eec114169134",
+      "objectId": "03a1df6c-6c37-4eba-bbe9-4497cb3f1382",
+      "userId": "03a1df6c-6c37-4eba-bbe9-4497cb3f1382",
+      "userType": "ActiveDirectory"
+    },
+    "flowTriggerUri": "https://unitedkingdom.api.flow.microsoft.com:443/providers/Microsoft.ProcessSimple/environments/6415725c-d1d7-437d-a50c-117f8097ded5/flows/840b4572-d47a-449e-b92e-a30dd31db1ae/triggers/Recurrence/run?api-version=2016-11-01",
+    "installationStatus": "Installed",
+    "provisioningMethod": "FromDefinition",
+    "flowFailureAlertSubscribed": true,
+    "workflowEntityId": "b3425d2a-70bf-ea11-a812-000d3a0b8c16",
+    "referencedResources": [],
+    "isManaged": false
+  }}	Newtonsoft.Json.Linq.JToken {Newtonsoft.Json.Linq.JObject}
+  
