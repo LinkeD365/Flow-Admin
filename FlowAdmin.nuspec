@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package>
   <metadata>
-    <id>LinkeD365.Flow Admin</id>
+    <id>LinkeD365.FlowAdmin</id>
     <title>Flow Administrator</title>
     <version>$version$</version>
     <authors>LinkeD365</authors>
