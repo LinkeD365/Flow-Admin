@@ -1,31 +1,25 @@
-﻿using Microsoft.Xrm.Sdk.Organization;
+﻿using LinkeD365.FlowAdmin.Properties;
+using Microsoft.Crm.Sdk.Messages;
+using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using NuGet.Packaging;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web.Services.Description;
-using System.Windows.Controls;
+using System.Net;
+using System.Net.Http;
 using System.Windows.Forms;
 using XrmToolBox.Extensibility;
-using Microsoft.IdentityModel.Clients.ActiveDirectory;
-using NuGet.Protocol.Plugins;
-using System.Net.Http;
-using Newtonsoft.Json.Linq;
-using System.Net;
-using System.ComponentModel;
-using NuGet.Packaging;
-using LinkeD365.FlowAdmin.Properties;
-using System.Collections;
-using Microsoft.Crm.Sdk.Messages;
 
 namespace LinkeD365.FlowAdmin
 {
     public partial class AdminControl : PluginControlBase
     {
-        private List<FlowDefinition> flows;
+        private SortableBindingList<FlowDefinition> flows;
         private FlowDefinition selectedFlow;
         private HttpClient flowClient;
         private HttpClient graphClient;
@@ -75,7 +69,9 @@ namespace LinkeD365.FlowAdmin
             }
         }
 
-        public void LoadFlows()
+        #region Load Flows from Dataverse
+
+        public void LoadFlowsFromDV()
         {
             WorkAsync(new WorkAsyncInfo
             {
@@ -91,7 +87,7 @@ namespace LinkeD365.FlowAdmin
                     // Add columns to su.Columns
                     su.Columns.AddColumns("azureactivedirectoryobjectid");
 
-                    List<FlowDefinition> flowList = new List<FlowDefinition>();
+                    SortableBindingList<FlowDefinition> flowList = new SortableBindingList<FlowDefinition>();
 
                     var flowRecords = Service.RetrieveMultiple(qe);
                     foreach (var flowRecord in flowRecords.Entities)
@@ -107,7 +103,10 @@ namespace LinkeD365.FlowAdmin
                             UniqueId = flowRecord["workflowidunique"].ToString(),
                             OwnerId = ((EntityReference)flowRecord["ownerid"]).Id.ToString(),
 
-                            AzureOwnerId = !flowRecord.Attributes.Contains("su.azureactivedirectoryobjectid") ? string.Empty : ((AliasedValue)flowRecord["su.azureactivedirectoryobjectid"]).Value.ToString()
+                            AzureOwnerId = !flowRecord.Attributes.Contains("su.azureactivedirectoryobjectid") ? string.Empty : ((AliasedValue)flowRecord["su.azureactivedirectoryobjectid"]).Value.ToString(),
+
+                            CreatedOn = (DateTime)flowRecord["createdon"],
+                            Modified = (DateTime)flowRecord["modifiedon"],
                         });
                     }
 
@@ -123,19 +122,18 @@ namespace LinkeD365.FlowAdmin
                         MessageBox.Show(e.Error.Message);
                         return;
                     }
-                    var returnFlows = e.Result as List<FlowDefinition>;
-                    if (returnFlows.Any())
-                    {
-                        gridFlows.SelectionChanged -= gridFlows_SelectionChanged;
-                        flows = returnFlows;
-                        gridFlows.DataSource = flows;
-                        SortGrid("Name", SortOrder.Ascending);
-                    }
+                    flows = e.Result as SortableBindingList<FlowDefinition>;
+                    InitGrid();
+                    //if (flows.Any())
+                    //{
+                    //    flows = new SortableBindingList<FlowDefinition>( returnFlows);
+                    //    gridFlows.DataSource = flows;
+                    //    //SortGrid("Name", SortOrder.Ascending);
+                    //}
 
-                    btnConnectDataverse.Visible = !returnFlows.Any();
+                    btnConnectDataverse.Visible = !flows.Any();
 
-                    btnConnectFlow.Visible = returnFlows.Any();
-                    gridFlows.SelectionChanged += gridFlows_SelectionChanged;
+                    btnConnectFlow.Visible = flows.Any();
 
                     //flowRecords = (EntityCollection)e.Result;
                     //gridFlows.DataSource = flowRecords;
@@ -143,7 +141,7 @@ namespace LinkeD365.FlowAdmin
             });
         }
 
-        private void LoadSolutions()
+        private void LoadSolutionsFromDV()
         {
             WorkAsync(new WorkAsyncInfo
             {
@@ -189,7 +187,7 @@ namespace LinkeD365.FlowAdmin
 
         private void GetFlowsForSolution()
         {
-            if (ddlSolutions.SelectedIndex == 0) { LoadFlows(); return; }
+            if (ddlSolutions.SelectedIndex == 0) { LoadFlowsFromDV(); return; }
             string solId = ((Solution)ddlSolutions.SelectedItem).Id;
             WorkAsync(new WorkAsyncInfo
             {
@@ -205,8 +203,12 @@ namespace LinkeD365.FlowAdmin
                     var sol = solComp.AddLink("solution", "solutionid", "solutionid");
                     sol.EntityAlias = "sol";
                     sol.LinkCriteria.AddCondition("solutionid", ConditionOperator.Equal, solId);
+                    var su = qe.AddLink("systemuser", "ownerid", "systemuserid");
+                    su.EntityAlias = "su";
 
-                    List<FlowDefinition> flowList = new List<FlowDefinition>();
+                    // Add columns to su.Columns
+                    su.Columns.AddColumns("azureactivedirectoryobjectid");
+                    SortableBindingList<FlowDefinition> flowList = new SortableBindingList<FlowDefinition>();
 
                     var flowRecords = Service.RetrieveMultiple(qe);
                     foreach (var flowRecord in flowRecords.Entities)
@@ -218,7 +220,11 @@ namespace LinkeD365.FlowAdmin
                             Definition = flowRecord["clientdata"].ToString(),
                             Description = !flowRecord.Attributes.Contains("description") ? string.Empty : flowRecord["description"].ToString(),
                             Solution = true,
-                            Managed = (bool)flowRecord["ismanaged"]
+                            Managed = (bool)flowRecord["ismanaged"],
+                            AzureOwnerId = !flowRecord.Attributes.Contains("su.azureactivedirectoryobjectid") ? string.Empty : ((AliasedValue)flowRecord["su.azureactivedirectoryobjectid"]).Value.ToString(),
+
+                            CreatedOn = (DateTime)flowRecord["createdon"],
+                            Modified = (DateTime)flowRecord["modifiedon"],
                         });
                     }
 
@@ -229,7 +235,8 @@ namespace LinkeD365.FlowAdmin
                 },
                 PostWorkCallBack = e =>
                 {
-                    var returnFlows = e.Result as List<FlowDefinition>;
+                    var returnFlows = e.Result as SortableBindingList<FlowDefinition>;
+                    InitGrid();
                     flows = returnFlows;
                     gridFlows.SelectionChanged -= gridFlows_SelectionChanged;
                     gridFlows.DataSource = flows;
@@ -237,12 +244,108 @@ namespace LinkeD365.FlowAdmin
                     {
                         SortGrid("Name", SortOrder.Ascending);
                     }
+                    gridFlows.ClearSelection();
+
                     gridFlows.SelectionChanged += gridFlows_SelectionChanged;
                     btnConnectDataverse.Visible = !returnFlows.Any();
                     btnConnectFlow.Visible = returnFlows.Any();
                 },
             });
         }
+
+        #endregion Load Flows from Dataverse
+
+        #region Get Flows from API
+
+        private void LoadUnSolutionedFlows()
+        {
+            if (flowConn == null) Connect();
+            if (flowClient == null) return;
+
+            SettingsManager.Instance.Save(typeof(APIConns), aPIConnections);
+
+            WorkAsync(
+                new WorkAsyncInfo
+                {
+                    Message = "Loading Flows",
+                    Work =
+                        (w, args) => args.Result = GetAllFlows(w),
+
+                    PostWorkCallBack =
+                        args =>
+                        {
+                            if (args.Error != null)
+                            {
+                                ShowError(args.Error, "Error retrieving Flows via API");
+                                return;
+                            }
+
+                            if (args.Result is SortableBindingList<FlowDefinition>)
+                            {
+                                flows = args.Result as SortableBindingList<FlowDefinition>;
+                                InitGrid();
+                                btnConnectDataverse.Visible = flows.Any();
+                                btnConnectFlow.Visible = !flows.Any();
+                                splitTop.Panel2Collapsed = true;
+                            }
+                            else ShowError(new Exception("Error retrieving Flows via API"), "Error retrieving Flows via API");
+                        }
+                }
+            );
+        }
+
+        private SortableBindingList<FlowDefinition> GetAllFlows(BackgroundWorker w)
+        {
+            var flows = new SortableBindingList<FlowDefinition>();
+            string url = $"https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/{flowConn.Environment}/flows?$top=50&api-version=2016-11-01";
+            flows = GetFlows(flows, url, w);
+            url = $"https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/{flowConn.Environment}/flows?$filter=search(%27team%27)&$top50&api-version=2016-11-01";
+            flows = GetFlows(flows, url, w);
+            Utils.Ai.WriteEvent("Flows Loaded", flows.Count);
+            return flows;
+        }
+
+        private SortableBindingList<FlowDefinition> GetFlows(SortableBindingList<FlowDefinition> flows, string url, BackgroundWorker w)
+        {
+            HttpResponseMessage response = flowClient.GetAsync(url).GetAwaiter()
+                   .GetResult();
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                var flowDefs = JObject.Parse(
+                    response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                if (flowDefs["value"].HasValues)
+                {
+                    foreach (JToken flowDef in flowDefs["value"].Children())
+                    {
+                        flows.Add(
+                            new FlowDefinition
+                            {
+                                Id = flowDef["name"].ToString(),
+                                UniqueId = flowDef["name"].ToString(),
+                                Solution = false,
+                                Name = flowDef["properties"]["displayName"].ToString(),
+                                OwnerType = flowDef["properties"]?["userType"]?.ToString() ?? string.Empty
+                            });
+                    }
+                }
+                if (flowDefs.GetValue("nextLink") != null)
+                {
+                    flows = GetFlows(flows, flowDefs["nextLink"].ToString(), w);
+                }
+                return flows;
+            }
+            else
+            {
+                LogError("Get Flows via API", response);
+                ShowError(
+                    $"Status: {response.StatusCode}\r\n{response.ReasonPhrase}\r\nSee XrmToolBox log for details.",
+                    "Get Flows via API error");
+                return null;
+            }
+        }
+
+        #endregion Get Flows from API
 
         private void GetFlowDetails()
         {
@@ -280,6 +383,7 @@ namespace LinkeD365.FlowAdmin
                     selectedFlow.Modified = ((DateTime)flowDetail["properties"]["lastModifiedTime"]).ToLocalTime();
                     selectedFlow.Status = flowDetail["properties"]["state"].ToString();
                     selectedFlow.Plan = flowDetail["properties"]["userType"].ToString();
+                    selectedFlow.AzureOwnerId = flowDetail["properties"]?["creator"]?["userId"]?.ToString() ?? string.Empty;
                     txtCreated.Text = selectedFlow.CreatedOn.ToString();
                     txtModified.Text = selectedFlow.Modified.ToString();
                     txtStatus.Text = selectedFlow.Status;
@@ -347,11 +451,9 @@ namespace LinkeD365.FlowAdmin
                         var owner = row.DataBoundItem as FlowOwner;
                         if (owner.Id.ToString() == selectedFlow.AzureOwnerId)
                         {
-                            ((DataGridViewImageCell)row.Cells[2]).Value = Properties.Resources.bingrey;                            //row.
-                            // row.DefaultCellStyle.BackColor
-                            // = Color.LightGreen;
+                            ((DataGridViewImageCell)row.Cells[2]).Value = Resources.bingrey;
                         }
-                        else ((DataGridViewImageCell)row.Cells[2]).Value = Properties.Resources.bin;                            //row.
+                        else ((DataGridViewImageCell)row.Cells[2]).Value = Resources.bin;
                     }
                 }
             });
@@ -621,100 +723,7 @@ namespace LinkeD365.FlowAdmin
             Utils.Ai.WriteEvent("Flow En/Disabled");
         }
 
-        private void LoadUnSolutionedFlows()
-        {
-            Connect();
-            if (flowClient == null)
-            {
-                return;
-            }
-
-            SettingsManager.Instance.Save(typeof(APIConns), aPIConnections);
-
-            WorkAsync(
-                new WorkAsyncInfo
-                {
-                    Message = "Loading Flows",
-                    Work =
-                        (w, args) => args.Result = GetAllFlows(w),
-
-                    PostWorkCallBack =
-                        args =>
-                        {
-                            if (args.Error != null)
-                            {
-                                ShowError(args.Error, "Error retrieving Flows via API");
-                                return;
-                            }
-
-                            if (args.Result is List<FlowDefinition>)
-                            {
-                                flows = args.Result as List<FlowDefinition>;
-
-                                gridFlows.DataSource = flows;
-                                SortGrid("Name", SortOrder.Ascending);
-                            }
-
-                            btnConnectDataverse.Visible = flows.Any();
-                            btnConnectFlow.Visible = !flows.Any();
-                            splitTop.Panel2Collapsed = true;
-                        }
-                }
-            );
-        }
-
-        private List<FlowDefinition> GetAllFlows(BackgroundWorker w)
-        {
-            var flows = new List<FlowDefinition>();
-            string url = $"https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/{flowConn.Environment}/flows?$top=50&api-version=2016-11-01";
-            flows = GetFlows(flows, url, w);
-            url = $"https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/{flowConn.Environment}/flows?$filter=search(%27team%27)&$top50&api-version=2016-11-01";
-            flows = GetFlows(flows, url, w);
-            Utils.Ai.WriteEvent("Flows Loaded", flows.Count);
-            return flows;
-        }
-
-        private List<FlowDefinition> GetFlows(List<FlowDefinition> flows, string url, BackgroundWorker w)
-        {
-            HttpResponseMessage response = flowClient.GetAsync(url).GetAwaiter()
-                   .GetResult();
-
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                var flowDefs = JObject.Parse(
-                    response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                if (flowDefs["value"].HasValues)
-                {
-                    foreach (JToken flowDef in flowDefs["value"].Children())
-                    {
-                        flows.Add(
-                            new FlowDefinition
-                            {
-                                Id = flowDef["name"].ToString(),
-                                UniqueId = flowDef["name"].ToString(),
-                                Solution = false,
-                                Name = flowDef["properties"]["displayName"].ToString(),
-                                OwnerType = flowDef["properties"]["userType"].ToString()
-                            });
-                    }
-                }
-                if (flowDefs.GetValue("nextLink") != null)
-                {
-                    flows = GetFlows(flows, flowDefs["nextLink"].ToString(), w);
-                }
-                return flows;
-            }
-            else
-            {
-                LogError("Get Flows via API", response);
-                ShowError(
-                    $"Status: {response.StatusCode}\r\n{response.ReasonPhrase}\r\nSee XrmToolBox log for details.",
-                    "Get Flows via API error");
-                return null;
-            }
-        }
-
-        private void RemoveOwner(FlowOwner owner)
+        private void RemoveOwnerDV(FlowOwner owner)
         {
             WorkAsync(new WorkAsyncInfo
             {
@@ -751,7 +760,6 @@ namespace LinkeD365.FlowAdmin
                     responses.Add(Service.Execute(orgReq));
 
                     if (e.Result == null) e.Result = responses;
-
                     //rgReq.Parameters.Add("Target", new EntityReference("flow", selectedFlow.Guid));
                 },
                 ProgressChanged = e =>
@@ -778,7 +786,75 @@ namespace LinkeD365.FlowAdmin
             Utils.Ai.WriteEvent("Flow Owner Removed", 1);
         }
 
-        private void UpdateOwner(List<FlowOwner> owners)
+        private void UpdateOwnerAPI(List<FlowOwner> owners)
+        {
+            if (flowConn == null) Connect();
+            if (flowClient == null) return;
+            SettingsManager.Instance.Save(typeof(APIConns), aPIConnections);
+
+            string url = $"https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/{flowConn.Environment}/flows/{selectedFlow.UniqueId}/modifyowners?api-version=2016-11-01&cascadeoperation=true";
+
+            WorkAsync(new WorkAsyncInfo
+            {
+                Message = "Adding Owner(s) ",
+                Work = (w, args) =>
+                {
+                    List<HttpResponseMessage> responses = new List<HttpResponseMessage>();
+                    foreach (FlowOwner owner in owners)
+                    {
+                        string payload = JsonConvert.SerializeObject(new
+                        {
+                            put = new List<object>()
+                            {
+                               new
+                              {
+                            name = owner.Id,
+                            properties = new
+                            {
+                                principal = new
+                                {
+                                    id = owner.Id,
+                                    displayName = owner.Name,
+                                    email = owner.Email,
+                                    type = "User"
+                                }
+                            }
+                              }
+                            }
+                        });
+                        var content = new StringContent(payload);
+                        content.Headers.ContentType.MediaType = "application/json";
+
+                        responses.Add(flowClient.PostAsync(url, content).GetAwaiter().GetResult());
+                    }
+                    args.Result = responses;
+                },
+                PostWorkCallBack = args =>
+                {
+                    if (args.Error != null)
+                    {
+                        MessageBox.Show(this, "Error while removing the owner: " + args.Error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    if (args.Result is List<HttpResponseMessage>)
+                    {
+                        List<HttpResponseMessage> responses = (List<HttpResponseMessage>)args.Result;
+                        if (responses.Any(res => !res.IsSuccessStatusCode))
+                        {
+                            MessageBox.Show(this, "Error while removing the owner: " + responses.First(res => !res.IsSuccessStatusCode).ReasonPhrase, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                        else
+                        {
+                            MessageBox.Show(this, "Owner(s) removed successfully", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            Utils.Ai.WriteEvent("Flow Owner Updated", owners.Count);
+                        }
+                    }
+                    GetFlowDetails();
+                }
+            }); ; ;
+        }
+
+        private void UpdateOwnerDV(List<FlowOwner> owners)
         {
             WorkAsync(new WorkAsyncInfo
             {
@@ -839,9 +915,51 @@ namespace LinkeD365.FlowAdmin
                         MessageBox.Show(this, "Owner(s) updated successfully", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         Utils.Ai.WriteEvent("Flow Owner Updated", owners.Count);
                     }
+
+                    GetFlowDetails();
                 },
             });
-            GetFlowDetails();
+        }
+
+        private void RemoveOwnerAPI(FlowOwner owner)
+        {
+            if (flowConn == null) Connect();
+            if (flowClient == null) return;
+            SettingsManager.Instance.Save(typeof(APIConns), aPIConnections);
+
+            string url = $"https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/{flowConn.Environment}/flows/{selectedFlow.UniqueId}/owners/{owner.Id}?api-version=2016-11-01";
+
+            WorkAsync(new WorkAsyncInfo
+            {
+                Message = "Deleting Owner " + owner.Name,
+                Work = (w, args) =>
+                {
+                    HttpResponseMessage response = flowClient.DeleteAsync(url).GetAwaiter().GetResult();
+                    args.Result = response;
+                },
+                PostWorkCallBack = args =>
+                {
+                    if (args.Error != null)
+                    {
+                        MessageBox.Show(this, "Error while removing the owner: " + args.Error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    if (args.Result is HttpResponseMessage)
+                    {
+                        HttpResponseMessage response = (HttpResponseMessage)args.Result;
+                        if (response.IsSuccessStatusCode)
+                        {
+                            MessageBox.Show(this, "Owner removed successfully", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            Utils.Ai.WriteEvent("Flow Owner Removed", 1);
+                        }
+                        else
+                        {
+                            MessageBox.Show(this, "Error while removing the owner: " + response.ReasonPhrase, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    GetFlowDetails();
+                }
+            });
         }
     }
 }

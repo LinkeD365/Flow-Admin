@@ -18,12 +18,12 @@ A XrmToolBox tool to maintain your Power Automate Flows.
 
     </description>
     <releaseNotes>
-
+	Release 1.1	matching on DV / API versions
 	</releaseNotes>
-    <copyright>Copyright 2020</copyright>
+    <copyright>Copyright 2023</copyright>
     <tags>XrmToolBox Plugins Mockaroo Munger</tags>
     <dependencies>
-      <dependency id="XrmToolBox" version="1.2020.6.40" />
+      <dependency id="XrmToolBox" version="1.2023.10.67" />
     </dependencies>
   </metadata>
   <files>

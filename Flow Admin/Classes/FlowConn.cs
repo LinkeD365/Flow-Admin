@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace LinkeD365.FlowAdmin
+﻿namespace LinkeD365.FlowAdmin
 {
     public class FlowConn : APIConn
     {

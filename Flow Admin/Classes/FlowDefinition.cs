@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace LinkeD365.FlowAdmin
@@ -19,6 +16,8 @@ namespace LinkeD365.FlowAdmin
         public string Description { get; set; }
         public bool Managed { get; set; }
         public string OwnerType { get; set; }
+
+        [Browsable(false)]
         public bool LogicApp { get; internal set; }
 
         [Browsable(false)]
@@ -30,8 +29,10 @@ namespace LinkeD365.FlowAdmin
 
         public DateTime Modified { get; set; }
 
+        [Browsable(false)]
         public string Type { get; set; }
 
+        [Browsable(false)]
         public string Plan
         {
             get
@@ -48,12 +49,16 @@ namespace LinkeD365.FlowAdmin
             internal set => plan = value;
         }
 
+        [Browsable(false)]
         public Guid Guid
         { get { return Guid.Parse(Id); } }
 
+        [Browsable(false)]
         public string OwnerId { get; internal set; }
 
+        [Browsable(false)]
         public string AzureOwnerId { get; internal set; }
+
         //public List<Comment> Comments = new List<Comment>();
     }
 

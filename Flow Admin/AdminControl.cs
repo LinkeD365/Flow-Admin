@@ -1,14 +1,7 @@
-﻿using McTools.Xrm.Connection;
-using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Query;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.ComponentModel;
 using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using XrmToolBox.Extensibility;
 
@@ -18,7 +11,7 @@ namespace LinkeD365.FlowAdmin
     {
         private Settings mySettings;
 
-        private BindingList<FlowRun> runsBS = new BindingList<FlowRun>();
+        private SortableBindingList<FlowRun> runsBS = new SortableBindingList<FlowRun>();
 
         public AdminControl()
         {
@@ -27,6 +20,12 @@ namespace LinkeD365.FlowAdmin
             runsSB.Scroll += RunsSB_EndScroll;
 
             gridFlowRuns.DataSource = runsBS;
+            InitRunGrid();
+        }
+
+        private void InitRunGrid()
+        {
+            gridFlowRuns.Columns["Selected"].Width = 30;
         }
 
         private void RunsSB_EndScroll(object sender, ScrollEventArgs e)
@@ -50,64 +49,6 @@ namespace LinkeD365.FlowAdmin
         private void TsbClose_Click(object sender, EventArgs e)
         {
             CloseTool();
-        }
-
-        private void TsbSample_Click(object sender, EventArgs e)
-        {
-            ExecuteMethod(GetAccounts);
-        }
-
-        private void GetAccounts()
-        {
-            WorkAsync(new WorkAsyncInfo
-            {
-                Message = "Getting accounts",
-                Work = (worker, args) =>
-                {
-                    args.Result = Service.RetrieveMultiple(new QueryExpression("account")
-                    {
-                        TopCount = 50
-                    });
-                },
-                PostWorkCallBack = (args) =>
-                {
-                    if (args.Error != null)
-                    {
-                        MessageBox.Show(args.Error.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    var result = args.Result as EntityCollection;
-                    if (result != null)
-                    {
-                        MessageBox.Show($"Found {result.Entities.Count} accounts");
-                    }
-                }
-            });
-        }
-
-        /// <summary>
-        /// This event occurs when the plugin is closed
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void MyPluginControl_OnCloseTool(object sender, EventArgs e)
-        {
-            // Before leaving, save the settings
-            SettingsManager.Instance.Save(GetType(), mySettings);
-        }
-
-        /// <summary>
-        /// This event occurs when the connection has been
-        /// updated in XrmToolBox
-        /// </summary>
-        public override void UpdateConnection(IOrganizationService newService, ConnectionDetail detail, string actionName, object parameter)
-        {
-            base.UpdateConnection(newService, detail, actionName, parameter);
-
-            if (mySettings != null && detail != null)
-            {
-                mySettings.LastUsedOrganizationWebappUrl = detail.WebApplicationUrl;
-                LogInfo("Connection has changed to: {0}", detail.WebApplicationUrl);
-            }
         }
 
         private void lblCreated_Click(object sender, EventArgs e)
@@ -157,12 +98,16 @@ namespace LinkeD365.FlowAdmin
 
             var selectedRuns = runsBS.Where(fr => fr.Selected).ToList();
             CancelAllFlows(selectedRuns);
+
+            GetFirstFlowRuns(selectedFlow, btnRuns.Text.Replace(" Runs", ""));
         }
 
         private void btnCancelAll_Click(object sender, EventArgs e)
         {
             if (selectedFlow == null) return;
             GetAllRunning(true);
+            GetFirstFlowRuns(selectedFlow, "All");
+            btnRuns.Text = "All Runs";
         }
 
         private void runsToolStripMenuItem_DropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
@@ -170,6 +115,7 @@ namespace LinkeD365.FlowAdmin
             if (selectedFlow == null) return;
             GetFirstFlowRuns(selectedFlow, e.ClickedItem.Text);
             btnRuns.Text = e.ClickedItem.Text + " Runs";
+            gridFlowRuns.Sort(gridFlowRuns.Columns["Start"], ListSortDirection.Descending);
         }
 
         private void btnDisable_Click(object sender, EventArgs e)
@@ -179,6 +125,12 @@ namespace LinkeD365.FlowAdmin
             if (MessageBox.Show($"Are you sure you want to {(selectedFlow.Status == "Stopped" ? "enable" : "disable")} the flow {selectedFlow.Name}?", $"{(selectedFlow.Status == "Stopped" ? "Enable" : "Disable")} Flow", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No) return;
 
             DisableEnableFlow();
+        }
+
+        private void gridFlowRuns_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (gridFlowRuns.CurrentCell is DataGridViewCheckBoxCell)
+                gridFlowRuns.CommitEdit(DataGridViewDataErrorContexts.Commit);
         }
     }
 }

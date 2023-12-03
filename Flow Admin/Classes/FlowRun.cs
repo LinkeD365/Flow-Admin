@@ -13,7 +13,7 @@ namespace LinkeD365.FlowAdmin
         [DisplayName(" ")]
         public bool Selected { get; set; }
 
-        public DateTime Start { get; set; }
+        public DateTime Start { get; internal set; }
         public DateTime? End { get; set; }
 
         [Browsable(false)]
@@ -36,7 +36,7 @@ namespace LinkeD365.FlowAdmin
             }
         }
 
-        public string Status { get; set; }
+        public string Status { get; internal set; }
 
         [Browsable(false)]
         public HttpResponseMessage Message { get; internal set; }

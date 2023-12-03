@@ -1,12 +1,5 @@
-﻿using Microsoft.Crm.Sdk.Messages;
-using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Messages;
-using Microsoft.Xrm.Sdk.Query;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using XrmToolBox.Extensibility;
 
@@ -16,8 +9,10 @@ namespace LinkeD365.FlowAdmin
     {
         private void btnConnectDataverse_Click(object sender, EventArgs e)
         {
-            ExecuteMethod(this.LoadFlows);
-            ExecuteMethod(this.LoadSolutions);
+            flowConn = null;
+            flowClient = null;
+            ExecuteMethod(this.LoadFlowsFromDV);
+            ExecuteMethod(this.LoadSolutionsFromDV);
         }
 
         private void textSearch_TextChanged(object sender, EventArgs e)
@@ -43,11 +38,15 @@ namespace LinkeD365.FlowAdmin
             var flow = gridFlows.SelectedRows[0].DataBoundItem as FlowDefinition;
             if (selectedFlow?.Id == flow.Id) return;
             selectedFlow = flow;
+            runsBS.Clear();
+            btnRuns.Text = "Runs";
             ExecuteMethod(GetFlowDetails);
         }
 
         private void btnConnectFlow_Click(object sender, EventArgs e)
         {
+            flowConn = null;
+            flowClient = null;
             LoadUnSolutionedFlows();
         }
 
@@ -58,7 +57,8 @@ namespace LinkeD365.FlowAdmin
             var owner = new Owner(graphClient);
             if (owner.ShowDialog() == DialogResult.OK && owner.SelectedOwners.Any())
             {
-                ExecuteMethod(UpdateOwner, owner.SelectedOwners);
+                if (selectedFlow.Solution) ExecuteMethod(UpdateOwnerDV, owner.SelectedOwners);
+                else ExecuteMethod(UpdateOwnerAPI, owner.SelectedOwners);
             };
         }
 
@@ -70,7 +70,8 @@ namespace LinkeD365.FlowAdmin
             if (owner.Id.ToString() == selectedFlow.AzureOwnerId) return; // Can't remove the owner of the flow
             if (MessageBox.Show($@"Do you want to remove {owner.Name} as an owner of this flow?", "Remove Owner", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                ExecuteMethod(RemoveOwner, owner);
+                if (selectedFlow.Solution) ExecuteMethod(RemoveOwnerDV, owner);
+                else ExecuteMethod(RemoveOwnerAPI, owner);
             }
         }
     }
