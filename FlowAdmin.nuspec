@@ -7,7 +7,7 @@
     <authors>LinkeD365</authors>
     <owners>LinkeD365</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <projectUrl>https://github.com/LinkeD365/MockarooDataMunger</projectUrl>
+    <projectUrl>https://github.com/LinkeD365/Flow-Admin</projectUrl>
     <iconUrl>https://linked365.blog/wp-content/uploads/2020/03/smallIcon.png</iconUrl>
     <description>
 A XrmToolBox tool to maintain your Power Automate Flows.
@@ -18,10 +18,12 @@ A XrmToolBox tool to maintain your Power Automate Flows.
 
     </description>
     <releaseNotes>
+	Added help hover text, fixed null reference, spelling mistakes and links to project Thanks @MscrmTools
+	
 	Release 1.1	matching on DV / API versions
 	</releaseNotes>
     <copyright>Copyright 2023</copyright>
-    <tags>XrmToolBox Plugins Mockaroo Munger</tags>
+    <tags>XrmToolBox Power Automate Administration</tags>
     <dependencies>
       <dependency id="XrmToolBox" version="1.2023.10.67" />
     </dependencies>

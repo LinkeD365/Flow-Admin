@@ -39,13 +39,21 @@ namespace LinkeD365.FlowAdmin
                 if (Graph)
                 {
                     graphClient = apiConnection.GetClient();
+                    if (graphClient != null)
+                        graphConn = apiConnection.graphConn;
+                    else
+                        return;
+
                     graphConn = apiConnection.graphConn;
                 }
                 else
                 {
                     flowClient = apiConnection.GetClient();
-
-                    flowConn = apiConnection.flowConn;
+                    if (flowClient != null)
+                    {
+                        flowConn = apiConnection.flowConn;
+                    }
+                    else return;
                 }
             }
             catch (AdalServiceException adalExec)
@@ -145,7 +153,7 @@ namespace LinkeD365.FlowAdmin
         {
             WorkAsync(new WorkAsyncInfo
             {
-                Message = "Retrieiving the Solutions",
+                Message = "Retrieving the Solutions",
                 Work = (w, e) =>
                 {
                     QueryExpression solQry = new QueryExpression("solution");

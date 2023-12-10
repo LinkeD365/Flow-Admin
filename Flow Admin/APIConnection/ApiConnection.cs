@@ -54,20 +54,23 @@ namespace LinkeD365.FlowAdmin
 
                 panelGraph.Visible = false;
             }
-            else if (apiConns.GraphConns.Any())
-            {
-                cboGraphConns.Items.AddRange(apiConns.GraphConns.ToArray());
-                cboGraphConns.SelectedIndex = 0;
-            }
             else
             {
-                EnableControls();
-                cboGraphConns.Enabled = false;
-                chkGraphDev.CheckedChanged += ChkGraphDev_CheckedChanged;
+                if (apiConns.GraphConns.Any())
+                {
+                    cboGraphConns.Items.AddRange(apiConns.GraphConns.ToArray());
+                    cboGraphConns.SelectedIndex = 0;
+                }
+                else
+                {
+                    EnableControls();
+                    cboGraphConns.Enabled = false;
+                    chkGraphDev.CheckedChanged += ChkGraphDev_CheckedChanged;
+                }
             }
-
             panelGraph.Visible = Graph;
             panelFlow.Visible = !Graph;
+            Text = $"Connect to {(Graph ? "Graph" : "Power Automate")} API";
         }
 
         private void EnableControls()
@@ -132,9 +135,10 @@ namespace LinkeD365.FlowAdmin
                         apiConns.GraphConns[grpIndex] = graphConn;
                     }
                 }
+                return Connect();
             }
 
-            return Connect();
+            return null;
         }
 
         private HttpClient Connect()
@@ -412,6 +416,21 @@ namespace LinkeD365.FlowAdmin
         {
             string url = "https://linked365.blog/2020/10/14/flow-to-visio-xrmtoolbox-addon/#" + ("PowerAutomateAPI");
             Process.Start(url);
+        }
+
+        private void btnGraphSubHelp_Click(object sender, EventArgs e)
+        {
+            toolTipAPI.Show(toolTipAPI.GetToolTip(txtSubscriptionId), txtSubscriptionId);
+            //var label = new RichTextLabel("This denotes the subsceription of your Azure tenant, available https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBladeV2");
+            //label.Show();
+        }
+
+        public class RichTextLabel : RichTextBox
+        {
+            public RichTextLabel(string text)
+            {
+                this.Text = text;
+            }
         }
     }
 }
