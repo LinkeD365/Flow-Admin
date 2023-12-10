@@ -23,6 +23,7 @@ A XrmToolBox tool to maintain your Power Automate Flows.
 	Release 1.1	matching on DV / API versions
 	</releaseNotes>
     <copyright>Copyright 2023</copyright>
+	<license type="expression">GPL-3.0-only</license>
     <tags>XrmToolBox Power Automate Administration</tags>
     <dependencies>
       <dependency id="XrmToolBox" version="1.2023.10.67" />

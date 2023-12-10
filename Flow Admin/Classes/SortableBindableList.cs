@@ -9,6 +9,24 @@ using System.Reflection;
 /// </summary>
 namespace LinkeD365.FlowAdmin
 {
+    public static class CollectionExtensions
+    {
+        public static void AddRange<T>(this ICollection<T> collection, IEnumerable<T> items)
+        {
+            List<T> list = collection as List<T>;
+            if (list != null)
+            {
+                list.AddRange(items);
+                return;
+            }
+
+            foreach (T item in items)
+            {
+                collection.Add(item);
+            }
+        }
+    }
+
     public class SortableBindingList<T> : BindingList<T>
     {
         private readonly Dictionary<Type, PropertyComparer<T>> comparers;

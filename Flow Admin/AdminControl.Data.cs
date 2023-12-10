@@ -5,7 +5,8 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using NuGet.Packaging;
+
+//using NuGet.Packaging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
