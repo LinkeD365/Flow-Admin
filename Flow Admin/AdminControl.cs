@@ -133,15 +133,6 @@ namespace LinkeD365.FlowAdmin
             gridFlowRuns.Sort(gridFlowRuns.Columns["Start"], ListSortDirection.Descending);
         }
 
-        private void btnDisable_Click(object sender, EventArgs e)
-        {
-            if (selectedFlow == null) return;
-
-            if (MessageBox.Show($"Are you sure you want to {(selectedFlow.Status == "Stopped" ? "enable" : "disable")} the flow {selectedFlow.Name}?", $"{(selectedFlow.Status == "Stopped" ? "Enable" : "Disable")} Flow", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No) return;
-
-            DisableEnableFlow();
-        }
-
         private void gridFlowRuns_CurrentCellDirtyStateChanged(object sender, EventArgs e)
         {
             if (gridFlowRuns.CurrentCell is DataGridViewCheckBoxCell)

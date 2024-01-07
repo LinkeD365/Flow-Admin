@@ -41,6 +41,8 @@
             this.toolStripMenu = new System.Windows.Forms.ToolStrip();
             this.btnConnectDataverse = new System.Windows.Forms.ToolStripButton();
             this.btnConnectFlow = new System.Windows.Forms.ToolStripButton();
+            this.ddEnable = new System.Windows.Forms.ToolStripDropDownButton();
+            this.btnEnableMulti = new System.Windows.Forms.ToolStripMenuItem();
             this.splitMiddle = new System.Windows.Forms.SplitContainer();
             this.gridFlows = new System.Windows.Forms.DataGridView();
             this.grpSelectedFlow = new System.Windows.Forms.GroupBox();
@@ -84,6 +86,7 @@
             this.lblSolution = new System.Windows.Forms.Label();
             this.ddlSolutions = new System.Windows.Forms.ComboBox();
             this.dataGridViewImageColumn1 = new System.Windows.Forms.DataGridViewImageColumn();
+            this.btnDisableMulti = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitMiddle)).BeginInit();
             this.splitMiddle.Panel1.SuspendLayout();
@@ -126,7 +129,8 @@
             this.toolStripMenu.ImageScalingSize = new System.Drawing.Size(24, 24);
             this.toolStripMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.btnConnectDataverse,
-            this.btnConnectFlow});
+            this.btnConnectFlow,
+            this.ddEnable});
             this.toolStripMenu.Location = new System.Drawing.Point(0, 0);
             this.toolStripMenu.Name = "toolStripMenu";
             this.toolStripMenu.Size = new System.Drawing.Size(949, 31);
@@ -150,6 +154,26 @@
             this.btnConnectFlow.Size = new System.Drawing.Size(170, 28);
             this.btnConnectFlow.Text = "Connect to Flow API";
             this.btnConnectFlow.Click += new System.EventHandler(this.btnConnectFlow_Click);
+            // 
+            // ddEnable
+            // 
+            this.ddEnable.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.btnEnableMulti,
+            this.btnDisableMulti});
+            this.ddEnable.Enabled = false;
+            this.ddEnable.Image = global::LinkeD365.FlowAdmin.Properties.Resources.Power_Red1;
+            this.ddEnable.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.ddEnable.Name = "ddEnable";
+            this.ddEnable.Size = new System.Drawing.Size(148, 28);
+            this.ddEnable.Text = "Enable/Disable";
+            // 
+            // btnEnableMulti
+            // 
+            this.btnEnableMulti.Image = global::LinkeD365.FlowAdmin.Properties.Resources.Power_Green1;
+            this.btnEnableMulti.Name = "btnEnableMulti";
+            this.btnEnableMulti.Size = new System.Drawing.Size(228, 30);
+            this.btnEnableMulti.Text = "Enable";
+            this.btnEnableMulti.Click += new System.EventHandler(this.btnEnableMulti_Click);
             // 
             // splitMiddle
             // 
@@ -685,6 +709,14 @@
             this.dataGridViewImageColumn1.ReadOnly = true;
             this.dataGridViewImageColumn1.Width = 125;
             // 
+            // btnDisableMulti
+            // 
+            this.btnDisableMulti.Image = global::LinkeD365.FlowAdmin.Properties.Resources.Power_Red1;
+            this.btnDisableMulti.Name = "btnDisableMulti";
+            this.btnDisableMulti.Size = new System.Drawing.Size(228, 30);
+            this.btnDisableMulti.Text = "Disable";
+            this.btnDisableMulti.Click += new System.EventHandler(this.btnDisableMulti_Click);
+            // 
             // AdminControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -788,5 +820,8 @@
         private System.Windows.Forms.ToolStripMenuItem btnAddOwner;
         private System.Windows.Forms.DataGridViewImageColumn btnRemove;
         private System.Windows.Forms.DataGridViewImageColumn dataGridViewImageColumn1;
+        private System.Windows.Forms.ToolStripDropDownButton ddEnable;
+        private System.Windows.Forms.ToolStripMenuItem btnEnableMulti;
+        private System.Windows.Forms.ToolStripMenuItem btnDisableMulti;
     }
 }

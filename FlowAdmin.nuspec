@@ -18,6 +18,11 @@ A XrmToolBox tool to maintain your Power Automate Flows.
 
     </description>
     <releaseNotes>
+    Jan 24 🎉🎄
+	    #1 - Added support for multiple enable/disable
+        #4 - fixed issue with solutions, can now use solutions to filter in DV mode
+		#5 - - added link to use the OAuth config
+		
 	Removed nuget depencies and references
 		
 	Added help hover text, fixed null reference, spelling mistakes and links to project Thanks @MscrmTools

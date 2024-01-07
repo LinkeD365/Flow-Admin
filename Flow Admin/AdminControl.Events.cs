@@ -34,7 +34,10 @@ namespace LinkeD365.FlowAdmin
 
         private void gridFlows_SelectionChanged(object sender, EventArgs e)
         {
-            if (gridFlows.SelectedRows.Count == 0) { return; }
+            EnableControls();
+            if (gridFlows.SelectedRows.Count != 1) { return; }
+            // if (gridFlows.SelectedRows.Count > 1) {
+            // return; }
             var flow = gridFlows.SelectedRows[0].DataBoundItem as FlowDefinition;
             if (selectedFlow?.Id == flow.Id) return;
             selectedFlow = flow;
@@ -74,6 +77,40 @@ namespace LinkeD365.FlowAdmin
                 if (selectedFlow.Solution) ExecuteMethod(RemoveOwnerDV, owner);
                 else ExecuteMethod(RemoveOwnerAPI, owner);
             }
+        }
+
+        private void btnDisable_Click(object sender, EventArgs e)
+        {
+            if (selectedFlow == null) return;
+            bool enable = false;
+            switch (selectedFlow.Status)
+            {
+                case "Stopped":
+                case "Suspended":
+                    enable = true;
+                    break;
+
+                case "Enabled":
+                case "Started":
+                    enable = false; break;
+                default:
+                    return; ;
+            }
+            if (MessageBox.Show($"Are you sure you want to {(enable ? "enable" : "disable")} the flow {selectedFlow.Name}?", $"{(enable ? "Enable" : "Disable")} Flow", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No) return;
+
+            DisableEnableFlow(selectedFlow, enable);
+            Utils.Ai.WriteEvent("Flow En/Disabled", 1);
+            GetFlowDetails();
+        }
+
+        private void btnEnableMulti_Click(object sender, EventArgs args)
+        {
+            EnableDisableMulti(true);
+        }
+
+        private void btnDisableMulti_Click(object sender, EventArgs e)
+        {
+            EnableDisableMulti(false);
         }
     }
 }

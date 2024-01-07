@@ -55,5 +55,40 @@ namespace LinkeD365.FlowAdmin
                 MessageBox.Show(error.Message, caption ?? "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private void EnableControls()
+        {
+            ddEnable.Enabled = gridFlows.SelectedRows.Count != 1;
+            btnCancel.Enabled = gridFlows.SelectedRows.Count == 1;
+            btnAddOwner.Enabled = gridFlows.SelectedRows.Count == 1;
+            btnRuns.Enabled = gridFlows.SelectedRows.Count == 1;
+            btnRemove.ReadOnly = gridFlows.SelectedRows.Count == 1;
+            btnDisable.Enabled = gridFlows.SelectedRows.Count == 1;
+
+            if (gridFlows.SelectedRows.Count != 1)
+            {
+                gridFlowRuns.DataSource = null;
+                gridOwners.DataSource = null;
+                txtCreated.Text = string.Empty;
+                txtModified.Text = string.Empty;
+                txtStatus.Text = string.Empty;
+                txtPlan.Text = string.Empty;
+            }
+        }
+
+        private void EnableDisableMulti(bool enable)
+        {
+            if (gridFlows.SelectedRows.Count > 1)
+            {
+                if (MessageBox.Show($"Are you sure you want to {(enable ? "enable" : "disable")}  the selected flows?", $"{(enable ? "Enable" : "Disable")} Flows", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No) return;
+                foreach (DataGridViewRow row in gridFlows.SelectedRows)
+                {
+                    var flow = row.DataBoundItem as FlowDefinition;
+                    DisableEnableFlow(flow, enable);
+                }
+
+                Utils.Ai.WriteEvent("Flow En/Disabled", gridFlows.SelectedRows.Count);
+            }
+        }
     }
 }

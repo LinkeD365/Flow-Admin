@@ -713,16 +713,16 @@ namespace LinkeD365.FlowAdmin
             return flowRun;
         }
 
-        private void DisableEnableFlow()
+        private void DisableEnableFlow(FlowDefinition flow, bool Enable)
         {
             WorkAsync(new WorkAsyncInfo
             {
-                Message = $"{(selectedFlow.Status == "Stopped" ? "Enabling" : "Disabling")} Flow " + selectedFlow.Name,
+                Message = $"{(Enable ? "Enabling" : "Disabling")} Flow " + flow.Name,
                 Work = (w, args) =>
                 {
-                    if (!selectedFlow.Solution)
+                    if (!flow.Solution)
                     {
-                        string url = $"https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/{flowConn.Environment}/flows/{selectedFlow.UniqueId}/{(selectedFlow.Status == "Stopped" ? "start" : "stop")}?api-version=2016-11-01";
+                        string url = $"https://api.flow.microsoft.com/providers/Microsoft.ProcessSimple/environments/{flowConn.Environment}/flows/{flow.UniqueId}/{(!Enable ? "start" : "stop")}?api-version=2016-11-01";
 
                         HttpResponseMessage response = flowClient.PostAsync(url, null).GetAwaiter()
                    .GetResult();
@@ -737,9 +737,9 @@ namespace LinkeD365.FlowAdmin
                     }
                     else
                     {
-                        Entity workFlow = new Entity("workflow", Guid.Parse(selectedFlow.Id));
-                        workFlow["statecode"] = new OptionSetValue(selectedFlow.Status == "Stopped" ? 1 : 0);
-                        workFlow["statuscode"] = new OptionSetValue(selectedFlow.Status == "Stopped" ? 2 : 1);
+                        Entity workFlow = new Entity("workflow", Guid.Parse(flow.Id));
+                        workFlow["statecode"] = new OptionSetValue(Enable ? 1 : 0);
+                        workFlow["statuscode"] = new OptionSetValue(Enable ? 2 : 1);
                         Service.Update(workFlow);
                     }
                 },
@@ -748,11 +748,10 @@ namespace LinkeD365.FlowAdmin
                     if (args.Error != null) { ShowError(args.Error.Message, "Error"); }
                     else
                     {
+                        GetFlowDetails();
                     }
-                    GetFlowDetails();
                 }
             });
-            Utils.Ai.WriteEvent("Flow En/Disabled");
         }
 
         private void RemoveOwnerDV(FlowOwner owner)
