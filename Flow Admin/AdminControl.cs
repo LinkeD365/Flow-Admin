@@ -4,14 +4,23 @@ using System.Data;
 using System.Linq;
 using System.Windows.Forms;
 using XrmToolBox.Extensibility;
+using XrmToolBox.Extensibility.Interfaces;
 
 namespace LinkeD365.FlowAdmin
 {
-    public partial class AdminControl : PluginControlBase
+    public partial class AdminControl : PluginControlBase, INoConnectionRequired, IGitHubPlugin, IPayPalPlugin
     {
         private Settings mySettings;
 
         private SortableBindingList<FlowRun> runsBS = new SortableBindingList<FlowRun>();
+
+        public string RepositoryName => "Flow-Admin";
+
+        public string UserName => "LinkeD365";
+
+        public string DonationDescription => "Buy me a coffee?";
+
+        public string EmailAccount => "carl.cookson@gmail.com";
 
         public AdminControl()
         {
@@ -43,6 +52,12 @@ namespace LinkeD365.FlowAdmin
                 aPIConnections = new APIConns();
 
                 LogWarning("Settings not found => a new settings file has been created!");
+            }
+
+            if (this.Service != null)
+            {
+                ExecuteMethod(LoadFlowsFromDV);
+                ExecuteMethod(LoadSolutionsFromDV);
             }
         }
 

@@ -3,6 +3,7 @@ using Microsoft.Crm.Sdk.Messages;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using Microsoft.Xrm.Tooling.Connector;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -27,6 +28,7 @@ namespace LinkeD365.FlowAdmin
         private APIConn flowConn;
         private APIConn graphConn;
         private APIConns aPIConnections;
+        private bool fromAPIButton;
 
         public string nextLinkUrl { get; private set; }
 
@@ -34,47 +36,66 @@ namespace LinkeD365.FlowAdmin
         {
             if (!Graph && flowClient != null) { return; }
             if (Graph && graphClient != null) { return; }
-            ApiConnection apiConnection = new ApiConnection(aPIConnections, Graph);
-            try
+
+            if (!fromAPIButton && ((CrmServiceClient)Service).ActiveAuthenticationType == Microsoft.Xrm.Tooling.Connector.AuthenticationType.OAuth)
             {
+                CrmServiceClient crmService = Service as CrmServiceClient;
                 if (Graph)
                 {
-                    graphClient = apiConnection.GetClient();
-                    if (graphClient != null)
-                        graphConn = apiConnection.graphConn;
-                    else
-                        return;
-
-                    graphConn = apiConnection.graphConn;
+                    graphConn = new GraphConn { AppId = ConnectionDetail.AzureAdAppId.ToString(), TenantId = crmService.TenantId.ToString(), ReturnURL = ConnectionDetail.ReplyUrl };
+                    graphClient = new ApiConnection(graphConn, true).Connect();
                 }
                 else
                 {
-                    flowClient = apiConnection.GetClient();
-                    if (flowClient != null)
-                    {
-                        flowConn = apiConnection.flowConn;
-                    }
-                    else return;
+                    flowConn = new FlowConn { AppId = ConnectionDetail.AzureAdAppId.ToString(), TenantId = crmService.TenantId.ToString(), ReturnURL = ConnectionDetail.ReplyUrl, Environment = crmService.EnvironmentId };
+                    flowClient = new ApiConnection(flowConn, false).Connect();
                 }
+                fromAPIButton = false;
             }
-            catch (AdalServiceException adalExec)
+            else
             {
-                LogError("Adal Error", adalExec.GetBaseException());
-
-                if (adalExec.ErrorCode == "authentication_canceled")
+                ApiConnection apiConnection = new ApiConnection(aPIConnections, Graph);
+                try
                 {
+                    if (Graph)
+                    {
+                        graphClient = apiConnection.GetClient();
+                        if (graphClient != null)
+                            graphConn = apiConnection.graphConn;
+                        else
+                            return;
+
+                        graphConn = apiConnection.graphConn;
+                    }
+                    else
+                    {
+                        flowClient = apiConnection.GetClient();
+                        if (flowClient != null)
+                        {
+                            flowConn = apiConnection.flowConn;
+                        }
+                        else return;
+                    }
+                }
+                catch (AdalServiceException adalExec)
+                {
+                    LogError("Adal Error", adalExec.GetBaseException());
+
+                    if (adalExec.ErrorCode == "authentication_canceled")
+                    {
+                        return;
+                    }
+
+                    // ShowError(adalExec, "Error in
+                    // connecting, please check details");
+                }
+                catch (Exception e)
+                {
+                    LogError("Error getting connection", e.Message);
+                    // ShowError(e, "Error in connecting,
+                    // please check entered details");
                     return;
                 }
-
-                // ShowError(adalExec, "Error in connecting,
-                // please check details");
-            }
-            catch (Exception e)
-            {
-                LogError("Error getting connection", e.Message);
-                // ShowError(e, "Error in connecting, please
-                // check entered details");
-                return;
             }
         }
 
@@ -204,7 +225,7 @@ namespace LinkeD365.FlowAdmin
                 Work = (w, e) =>
                 {
                     var qe = new QueryExpression("workflow");
-                    qe.ColumnSet.AddColumns("ismanaged", "clientdata", "description", "name", "createdon", "modifiedon", "modifiedby", "createdby");
+                    qe.ColumnSet.AddColumns("ismanaged", "clientdata", "description", "name", "createdon", "modifiedon", "modifiedby", "createdby", "workflowidunique", "ownerid");
                     qe.AddOrder("name", OrderType.Ascending);
                     qe.Criteria.AddCondition("category", ConditionOperator.Equal, 5);
                     var solComp = qe.AddLink("solutioncomponent", "workflowid", "objectid", JoinOperator.Inner);
@@ -234,6 +255,8 @@ namespace LinkeD365.FlowAdmin
 
                             CreatedOn = (DateTime)flowRecord["createdon"],
                             Modified = (DateTime)flowRecord["modifiedon"],
+                            UniqueId = flowRecord["workflowidunique"].ToString(),
+                            OwnerId = ((EntityReference)flowRecord["ownerid"]).Id.ToString(),
                         });
                     }
 

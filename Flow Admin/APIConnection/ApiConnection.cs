@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Web.Services.Description;
 using System.Windows.Forms;
 
 namespace LinkeD365.FlowAdmin
@@ -30,6 +31,14 @@ namespace LinkeD365.FlowAdmin
         private const string returnText = "Return URL for Configured App Regisration";
         private const string labelText = "Label for Connection";
         private const string environmentText = "Power Automate Environment Id";
+
+        public ApiConnection(APIConn aPIConn, bool graph)
+        {
+            InitializeComponent();
+            if (graph) this.graphConn = (GraphConn)aPIConn;
+            else this.flowConn = (FlowConn)aPIConn;
+            Graph = graph;
+        }
 
         public ApiConnection(APIConns apiConnections, bool graph)
         {
@@ -141,7 +150,7 @@ namespace LinkeD365.FlowAdmin
             return null;
         }
 
-        private HttpClient Connect()
+        public HttpClient Connect()
         {
             var token = GetInteractiveClientToken();
 

@@ -47,6 +47,7 @@ namespace LinkeD365.FlowAdmin
         {
             flowConn = null;
             flowClient = null;
+            fromAPIButton = true;
             LoadUnSolutionedFlows();
         }
 

@@ -18,6 +18,8 @@ A XrmToolBox tool to maintain your Power Automate Flows.
 
     </description>
     <releaseNotes>
+	Removed nuget depencies and references
+		
 	Added help hover text, fixed null reference, spelling mistakes and links to project Thanks @MscrmTools
 	
 	Release 1.1	matching on DV / API versions

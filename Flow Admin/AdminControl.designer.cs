@@ -457,14 +457,14 @@
             // btnCancelSelected
             // 
             this.btnCancelSelected.Name = "btnCancelSelected";
-            this.btnCancelSelected.Size = new System.Drawing.Size(224, 26);
+            this.btnCancelSelected.Size = new System.Drawing.Size(149, 26);
             this.btnCancelSelected.Text = "Selected";
             this.btnCancelSelected.Click += new System.EventHandler(this.btnCancelSelected_Click);
             // 
             // btnCancelAll
             // 
             this.btnCancelAll.Name = "btnCancelAll";
-            this.btnCancelAll.Size = new System.Drawing.Size(224, 26);
+            this.btnCancelAll.Size = new System.Drawing.Size(149, 26);
             this.btnCancelAll.Text = "All";
             this.btnCancelAll.Click += new System.EventHandler(this.btnCancelAll_Click);
             // 
